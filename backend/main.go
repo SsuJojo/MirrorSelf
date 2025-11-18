@@ -62,13 +62,13 @@ func main() {
 			Status string `json:"status"`
 		}
 
-		var req Request
-		if err := c.BodyParser(&req); err != nil {
-			logger.Error("JSON parse error", zap.Error(err))
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Cannot parse JSON",
-			})
-		}
+			var req Request
+			if err := c.BodyParser(&req); err != nil {
+				logger.Error("JSON parse error", zap.Error(err))
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "Cannot parse JSON",
+				})
+			}
 
 		logger.Info("Received meal", zap.String("meal", req.Meal))
 

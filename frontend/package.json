@@ -11,14 +11,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/1049731887/MirrorSelf.git"
+    "url": "git+https://github.com/ssujojo/MirrorSelf.git"
   },
   "author": "SsuJo_",
   "license": "SEE LICENSE IN LICENSE",
   "bugs": {
-    "url": "https://github.com/1049731887/MirrorSelf/issues"
+    "url": "https://github.com/ssujojo/MirrorSelf/issues"
   },
-  "homepage": "https://github.com/1049731887/MirrorSelf#readme",
+  "homepage": "https://github.com/ssujojo/MirrorSelf#readme",
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
     "vite": "^5.3.0"
