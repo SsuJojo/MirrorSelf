@@ -1,8 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"strings"
+	"time"
+
+	"net/http"
 
 	"mirrorself/backend/pb"
 
@@ -62,15 +67,16 @@ func main() {
 			Status string `json:"status"`
 		}
 
-			var req Request
-			if err := c.BodyParser(&req); err != nil {
-				logger.Error("JSON parse error", zap.Error(err))
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-					"error": "Cannot parse JSON",
-				})
-			}
+		var req Request
+		if err := c.BodyParser(&req); err != nil {
+			logger.Error("JSON parse error", zap.Error(err))
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Cannot parse JSON",
+			})
+		}
 
 		logger.Info("Received meal", zap.String("meal", req.Meal))
+		NotifyMeal(req.Meal)
 
 		return c.JSON(Response{Status: "recorded"})
 	})
@@ -88,4 +94,27 @@ func main() {
 	if err := app.Listen(":3001"); err != nil {
 		logger.Fatal("Server failed", zap.Error(err))
 	}
+}
+
+func NotifyMeal(meal string) {
+	go func() {
+		url := "https://api.qkdata.space/notice_me"
+
+		body := []byte(`{"msg":"` + meal + `"}`)
+
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+		if err != nil {
+			fmt.Println("Failed to create request")
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{
+			Timeout: 5 * time.Second,
+		}
+
+		res, err := client.Do(req)
+		if err == nil {
+			defer res.Body.Close()
+		}
+	}()
 }
