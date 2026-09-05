@@ -82,10 +82,26 @@ npm run build
 
 ```bash
 cd ../backend
+# 可选：复制并填写仓库根目录的运行时配置
+cp ../.env.example ../.env
+set -a && source ../.env && set +a
+
 go run .
 ```
 
-默认情况下，Go 服务监听 `:3001`，并托管 `frontend/dist` 中的前端构建产物。
+默认情况下，Go 服务监听 `:3001`，并托管 `frontend/dist` 中的前端构建产物。后端不会自动读取 `.env` 文件；请像上面的示例一样先将变量导出到当前 shell，或由部署平台注入环境变量。
+
+### 配置
+
+仓库根目录的 [`.env.example`](./.env.example) 列出了后端配置：
+
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `MIRRORSELF_HTTP_ADDR` | `:3001` | Go API 与静态文件服务监听地址 |
+| `MIRRORSELF_POCKETBASE_ADDR` | `127.0.0.1:8090` | 内置 PocketBase 监听地址 |
+| `MIRRORSELF_NOTIFY_URL` | 空 | 可选的外部通知 `POST` 地址；留空则禁用通知 |
+
+Vite 开发服务器的配置示例位于 [`frontend/.env.example`](./frontend/.env.example)。如需通过局域网或自定义域名访问开发服务器，可复制为 `frontend/.env.development.local` 并填写 `VITE_ALLOWED_HOSTS`；该文件不会提交到仓库。
 
 ## API
 
