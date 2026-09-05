@@ -1,7 +1,7 @@
 {
   "name": "mirrorself",
   "version": "1.0.0",
-  "description": "TODO",
+  "description": "A lightweight meal-sharing web app built with Vue and Go.",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
