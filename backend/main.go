@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
-
-	"net/http"
 
 	"mirrorself/backend/pb"
 
@@ -16,6 +16,32 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+
+const (
+	defaultHTTPAddr       = ":3001"
+	defaultPocketBaseAddr = "127.0.0.1:8090"
+)
+
+type config struct {
+	httpAddr       string
+	pocketBaseAddr string
+	notifyURL      string
+}
+
+func loadConfig() config {
+	return config{
+		httpAddr:       envOrDefault("MIRRORSELF_HTTP_ADDR", defaultHTTPAddr),
+		pocketBaseAddr: envOrDefault("MIRRORSELF_POCKETBASE_ADDR", defaultPocketBaseAddr),
+		notifyURL:      strings.TrimSpace(os.Getenv("MIRRORSELF_NOTIFY_URL")),
+	}
+}
+
+func envOrDefault(key, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		return value
+	}
+	return fallback
+}
 
 func initLogger() *zap.Logger {
 	encoderCfg := zapcore.EncoderConfig{
@@ -51,8 +77,9 @@ func initLogger() *zap.Logger {
 }
 
 func main() {
+	cfg := loadConfig()
 	app := fiber.New()
-	pb.StartPocketBase()
+	pb.StartPocketBase(cfg.pocketBaseAddr)
 	logger := initLogger()
 	defer logger.Sync()
 
@@ -76,7 +103,7 @@ func main() {
 		}
 
 		logger.Info("Received meal", zap.String("meal", req.Meal))
-		NotifyMeal(req.Meal)
+		NotifyMeal(req.Meal, cfg.notifyURL)
 
 		return c.JSON(Response{Status: "recorded"})
 	})
@@ -87,24 +114,31 @@ func main() {
 	})
 
 	app.All("/db/*", func(c *fiber.Ctx) error {
-		target := "http://127.0.0.1:8090" + strings.TrimPrefix(c.OriginalURL(), "/db") // PocketBase 地址，原请求去除/db前缀
+		target := "http://" + cfg.pocketBaseAddr + strings.TrimPrefix(c.OriginalURL(), "/db") // PocketBase 地址，原请求去除/db前缀
 		return proxy.Do(c, target)
 	})
 
-	if err := app.Listen(":3001"); err != nil {
+	if err := app.Listen(cfg.httpAddr); err != nil {
 		logger.Fatal("Server failed", zap.Error(err))
 	}
 }
 
-func NotifyMeal(meal string) {
+func NotifyMeal(meal, notifyURL string) {
+	if notifyURL == "" {
+		return
+	}
+
 	go func() {
-		url := "https://api.qkdata.space/notice_me"
+		body, err := json.Marshal(map[string]string{"msg": meal})
+		if err != nil {
+			fmt.Println("Failed to encode notification")
+			return
+		}
 
-		body := []byte(`{"msg":"` + meal + `"}`)
-
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+		req, err := http.NewRequest("POST", notifyURL, bytes.NewBuffer(body))
 		if err != nil {
 			fmt.Println("Failed to create request")
+			return
 		}
 		req.Header.Set("Content-Type", "application/json")
 
