@@ -6,16 +6,16 @@ import (
 	"github.com/pocketbase/pocketbase"
 )
 
-func StartPocketBase() *pocketbase.PocketBase {
+func StartPocketBase(addr string) *pocketbase.PocketBase {
 	app := pocketbase.New()
 
 	app.RootCmd.SetArgs([]string{
 		"serve",
-		"--http=127.0.0.1:8090",
+		"--http=" + addr,
 	})
 
 	go func() {
-		log.Println("▶ PocketBase: 开始启动 (127.0.0.1:8090)")
+		log.Printf("▶ PocketBase: 开始启动 (%s)", addr)
 		if err := app.Start(); err != nil {
 			log.Fatalf("错误: %v", err)
 		}
