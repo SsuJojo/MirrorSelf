@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"mirrorself/backend/pb"
 
@@ -20,6 +21,8 @@ import (
 const (
 	defaultHTTPAddr       = ":3001"
 	defaultPocketBaseAddr = "127.0.0.1:8090"
+	maxMealLength         = 500
+	maxRequestBody        = 16 * 1024
 )
 
 type config struct {
@@ -78,7 +81,7 @@ func initLogger() *zap.Logger {
 
 func main() {
 	cfg := loadConfig()
-	app := fiber.New()
+	app := fiber.New(fiber.Config{BodyLimit: maxRequestBody})
 	pb.StartPocketBase(cfg.pocketBaseAddr)
 	logger := initLogger()
 	defer logger.Sync()
@@ -101,9 +104,13 @@ func main() {
 				"error": "Cannot parse JSON",
 			})
 		}
+		meal, err := validateMeal(req.Meal)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
 
-		logger.Info("Received meal", zap.String("meal", req.Meal))
-		NotifyMeal(req.Meal, cfg.notifyURL)
+		logger.Info("Received meal", zap.String("meal", meal))
+		NotifyMeal(meal, cfg.notifyURL)
 
 		return c.JSON(Response{Status: "recorded"})
 	})
@@ -121,6 +128,17 @@ func main() {
 	if err := app.Listen(cfg.httpAddr); err != nil {
 		logger.Fatal("Server failed", zap.Error(err))
 	}
+}
+
+func validateMeal(meal string) (string, error) {
+	meal = strings.TrimSpace(meal)
+	if meal == "" {
+		return "", fmt.Errorf("meal must not be empty")
+	}
+	if utf8.RuneCountInString(meal) > maxMealLength {
+		return "", fmt.Errorf("meal must be at most %d characters", maxMealLength)
+	}
+	return meal, nil
 }
 
 func NotifyMeal(meal, notifyURL string) {
